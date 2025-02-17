@@ -1,0 +1,4 @@
+input1.txt
+__pycache__/
+.venv/
+save/
