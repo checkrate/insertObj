@@ -1,0 +1,3 @@
+[submodule "poisson_blend"]
+	path = poisson_blend
+	url = https://github.com/Erkaman/poisson_blend.git
