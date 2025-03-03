@@ -1,3 +1,9 @@
+import os
+import os.path as osp
+
+SCRIPT_DIR = osp.dirname(__file__)
+BASE_DIR = osp.abspath(osp.join(SCRIPT_DIR, '..'))
+
 import numpy as np
 from scipy.signal import medfilt
 from typing import List, Tuple
@@ -103,7 +109,7 @@ class TrajectorySimulator:
             positions_y[:] = first_y
             positions_s[:] = first_s
         
-        # медианная фильтрации для сглаживания
+        # медианная фильтрация для сглаживания
         positions_x = medfilt(positions_x, kernel_size=5)
         positions_y = medfilt(positions_y, kernel_size=5)
         positions_s = medfilt(positions_s, kernel_size=5)
@@ -111,7 +117,7 @@ class TrajectorySimulator:
         return positions_x, positions_y, positions_s
 
 if __name__ == "__main__":
-    # Пример использования:
-    simulator = TrajectorySimulator("input.txt", n_frames=100)
+    # input.txt теперь находится в той же директории, что и скрипт (src)
+    simulator = TrajectorySimulator(osp.join(SCRIPT_DIR, "input.txt"), n_frames=100)
     pos_x, pos_y, pos_s = simulator.simulate()
     print("Симуляция завершена.")

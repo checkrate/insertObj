@@ -1,5 +1,9 @@
 import os
 import os.path as osp
+
+SCRIPT_DIR = osp.dirname(__file__)
+BASE_DIR = osp.abspath(osp.join(SCRIPT_DIR, '..'))
+
 import cv2
 import shutil
 import tempfile
@@ -24,15 +28,16 @@ class VideoProcessor:
     Класс для обработки видео: извлечение кадров, вычисление движения камеры,
     рендеринг видео и объединение с траекторией.
     """
-    def __init__(self, video_path: str, save_dir: str = "save", res_dir: str = "res"):
+    def __init__(self, video_path: str, save_dir: str = None, res_dir: str = None):
         """
         :param video_path: Путь к исходному видео.
         :param save_dir: Директория для сохранения промежуточных файлов.
         :param res_dir: Директория для сохранения результата.
         """
         self.video_path = video_path
-        self.save_dir = save_dir
-        self.res_dir = res_dir
+        # Для папок save и res используем BASE_DIR (some)
+        self.save_dir = save_dir or osp.join(BASE_DIR, "save")
+        self.res_dir = res_dir or osp.join(BASE_DIR, "res")
         self.raw_frames_path = osp.join(self.save_dir, "raw_frames")
         os.makedirs(self.save_dir, exist_ok=True)
         os.makedirs(self.res_dir, exist_ok=True)
@@ -57,7 +62,7 @@ class VideoProcessor:
                 frame_size = frame.shape[:2]
                 cv2.imwrite(frame_filename, frame)
             else:
-                print(f"Warning: Frame {count} is пустой.")
+                print(f"Warning: Frame {count} пустой.")
             success, frame = vidcap.read()
             count += 1
         if count == 0:
@@ -198,9 +203,9 @@ class VideoProcessor:
         # Вычисление движения камеры
         motions = self.compute_camera_motion(num_frames)
         global_motions = self.accumulate_motions(motions)
-        # Симуляция траектории 
+        # Симуляция траектории
         from simulate_trajectory import TrajectorySimulator
-        simulator = TrajectorySimulator("input.txt", n_frames=num_frames)
+        simulator = TrajectorySimulator(osp.join(SCRIPT_DIR, "input.txt"), n_frames=num_frames)
         pos_x, pos_y, pos_s = simulator.simulate()
         adjusted_x, adjusted_y = self.project_positions_with_camera_motion((pos_x, pos_y), global_motions)
         adjusted_positions = (adjusted_x, adjusted_y, pos_s)
@@ -230,7 +235,7 @@ class ObjectInserter:
         if poisson_blend_cmd:
             self.poisson_blend_cmd = poisson_blend_cmd
         else:
-            self.poisson_blend_cmd = osp.join(os.path.abspath("./poisson_blend/build"), "poisson_blend")
+            self.poisson_blend_cmd = osp.join(BASE_DIR, "poisson_blend", "build", "poisson_blend")
 
     @log_execution
     def auto_generate_mask(self, path_to_object: str, object_img: np.ndarray) -> np.ndarray:
@@ -247,7 +252,6 @@ class ObjectInserter:
         mask2 = ((mask == cv2.GC_FGD) | (mask == cv2.GC_PR_FGD)).astype('uint8') * 255
         # цветная маска (выделяем красным)
         mask_colored = cv2.merge([np.zeros_like(mask2), np.zeros_like(mask2), mask2])
-        #cv2.imsave("./poisson_blend/img/")
         return mask_colored
 
     @log_execution
@@ -394,7 +398,8 @@ def main():
     if args.mask_method == "auto" and not args.path_to_mask:
         parser.error("При выборе режима 'auto' для маски необходимо указать путь к маске.")
 
-    VIDS_DIR = "vids"
+    # Директория с видео остается в BASE_DIR (some)
+    VIDS_DIR = osp.join(BASE_DIR, "vids")
     video_files = [f for f in os.listdir(VIDS_DIR)
                    if osp.isfile(osp.join(VIDS_DIR, f))
                    and f.lower().endswith((".mp4", ".avi", ".mov", ".mkv"))]
